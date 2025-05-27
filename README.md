@@ -1,101 +1,33 @@
-#include <WiFi.h>
-#include <PubSubClient.h>
+# Sistema de Irrigação Automática com IoT e MQTT
 
-// Configurações Wi-Fi
-const char* ssid = "SEU_SSID";
-const char* password = "SUA_SENHA_WIFI";
+Este projeto implementa um sistema de irrigação inteligente usando ESP32, sensor de umidade do solo, relé, bomba de 6V, e comunicação via MQTT. O sistema mede a umidade do solo, envia os dados para a nuvem, e ativa a bomba automaticamente quando necessário, promovendo economia de água e agricultura sustentável.
 
-// Configurações MQTT
-const char* mqtt_server = "IP_DO_SERVIDOR_MQTT";
-const int mqtt_port = 1883;
-const char* mqtt_user = "USUARIO_MQTT";      // se necessário
-const char* mqtt_password = "SENHA_MQTT";   // se necessário
+---
 
-// Tópicos MQTT
-const char* topic_sensor = "sistema/umidade";
-const char* topic_comando = "sistema/comando";
+## Como usar este projeto
 
-// Pinos
-const int sensorPin = 34;      // ADC GPIO34
-const int relePin = 26;        // GPIO conectado ao relé (controle da bomba)
+### Funcionalidades principais
+- Leitura contínua do sensor de umidade
+- Comunicação via Wi-Fi usando MQTT
+- Controle remoto da bomba via internet
+- Automação inteligente e econômica
 
-WiFiClient espClient;
-PubSubClient client(espClient);
+### Repositório contém:
+- Código-fonte completo (Arduino IDE)
+- Documentação de hardware (componentes, conexões, medidas)
+- Detalhes dos protocolos e interfaces
+- Instruções passo a passo para montar, configurar e usar
 
-void setup() {
-  Serial.begin(115200);
-  pinMode(relePin, OUTPUT);
-  digitalWrite(relePin, LOW); // bomba desligada inicialmente
+### Como reproduzir
+1. Baixe o código-fonte do repositório
+2. Conecte seu ESP32, sensor de umidade, relé e bomba conforme a documentação
+3. Configure as credenciais de Wi-Fi e MQTT
+4. Compile e envie o código pelo Arduino IDE
+5. Monitore a operação na sua plataforma MQTT ou interface web
 
-  connectWiFi();
-  connectMQTT();
-}
+---
 
-void loop() {
-  if (!client.connected()) {
-    reconnectMQTT();
-  }
-  client.loop();
+## Contato
+Para mais detalhes, acesse o repositório completo:
+[https://github.com/milena290997/IDE-Arduino-](https://github.com/milena290997/IDE-Arduino-)
 
-  // Lendo a umidade do solo
-  int umidade = analogRead(sensorPin);
-  Serial.print("Umidade do solo: ");
-  Serial.println(umidade);
-
-  // Envia o dado do sensor para a nuvem
-  char msg[50];
-  sprintf(msg, "%d", umidade);
-  client.publish(topic_sensor, msg);
-
-  // Verifica se recebeu comando para ligar/desligar a bomba
-  // Isso é feito via callback (definido abaixo)
-
-  delay(60000); // espera 1 minuto antes da próxima leitura
-}
-
-void connectWiFi() {
-  Serial.print("Conectando ao WiFi");
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("Conectado ao WiFi");
-}
-
-void reconnectMQTT() {
-  while (!client.connected()) {
-    Serial.print("Conectando ao MQTT...");
-    if (client.connect("ESP32Client", mqtt_user, mqtt_password)) {
-      Serial.println("conectado");
-      // Inscreve-se no tópico de comandos
-      client.subscribe(topic_comando);
-    } else {
-      Serial.print("falhou, rc=");
-      Serial.print(client.state());
-      delay(5000);
-    }
-  }
-}
-
-// callback para receber comandos
-void callback(char* topic, byte* payload, unsigned int length) {
-  String msgTemp;
-
-  for (int i=0; i<length; i++) {
-    msgTemp += (char)payload[i];
-  }
-  Serial.print("Mensagem recebida: ");
-  Serial.println(msgTemp);
-
-  if (msgTemp == "LIGAR") {
-    digitalWrite(relePin, HIGH); // Liga a bomba
-  } else if (msgTemp == "DESLIGAR") {
-    digitalWrite(relePin, LOW);  // Desliga a bomba
-  }
-}
-
-// seta a função de callback
-void setupCallbacks() {
-  client.setCallback(callback);
-}
